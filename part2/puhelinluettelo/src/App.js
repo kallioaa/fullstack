@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const Persons = ({ persons, filter }) => {
   const filtered = [...persons].filter((person) => person.name.toLowerCase().includes(filter.toLowerCase()));
@@ -18,6 +19,7 @@ const Filter = ({ filter, setFilter }) => (
     filter shown with <input onChange={(event) => setFilter(event.target.value)} value={filter} />
   </div>
 );
+
 const PersonForm = ({ persons, setPersons, newName, setNewName, newNumber, setNewNumber }) => {
   const addDetails = (event) => {
     event.preventDefault();
@@ -47,15 +49,22 @@ const PersonForm = ({ persons, setPersons, newName, setNewName, newNumber, setNe
 };
 
 const App = () => {
-  const [persons, setPersons] = useState([
-    { name: 'Arto Hellas', number: '040-123456' },
-    { name: 'Ada Lovelace', number: '39-44-5323523' },
-    { name: 'Dan Abramov', number: '12-43-234345' },
-    { name: 'Mary Poppendieck', number: '39-23-6423122' },
-  ]);
+  const [persons, setPersons] = useState([]);
   const [newName, setNewName] = useState('');
   const [filter, setFilter] = useState('');
   const [newNumber, setNewNumber] = useState('');
+
+  useEffect(() => {
+    axios
+      .get('http://localhost:3001/persons')
+      .then((response) => {
+        console.log('JSON data fetched');
+        setPersons(response.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }, []);
 
   return (
     <div>
