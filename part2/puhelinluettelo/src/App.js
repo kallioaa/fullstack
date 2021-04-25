@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import personsDAO from './services/personsDAO';
 
-const Persons = ({ persons, filter }) => {
+const Persons = ({ persons, setPersons, filter }) => {
+  const removePerson = (person) => {
+    if (window.confirm(`Delete ${person.name} ?`)) {
+      const personsCopy = [...persons];
+      personsDAO.remove(person.id).then(setPersons(personsCopy.filter((another) => another.id !== person.id)));
+    }
+  };
+
   const filtered = [...persons].filter((person) => person.name.toLowerCase().includes(filter.toLowerCase()));
   return (
     <ul>
       {filtered.map((person) => (
         <li key={person.id}>
-          {person.name} {person.number}
+          {person.name} {person.number} <button onClick={() => removePerson(person)}> remove </button>
         </li>
       ))}
     </ul>
@@ -21,15 +28,28 @@ const Filter = ({ filter, setFilter }) => (
 );
 
 const PersonForm = ({ persons, setPersons, newName, setNewName, newNumber, setNewNumber }) => {
+  const changeNumber = (person) => {
+    const changedPerson = { ...person, number: newNumber };
+    personsDAO.update(person.id, changedPerson).then((returnedPerson) => {
+      setPersons(persons.map((another) => (another.id !== changedPerson.id ? another : returnedPerson)));
+    });
+  };
+
   const addDetails = (event) => {
     event.preventDefault();
     if (!persons.map((person) => person.name).includes(newName)) {
       // if name is already in the phone book
-      setPersons(persons.concat({ id: persons.length, name: newName, number: newNumber }));
+      const newPerson = { name: newName, number: newNumber };
+      personsDAO.create(newPerson).then((response) => setPersons(persons.concat(response)));
       setNewName('');
       setNewNumber('');
     } else {
-      window.alert(`${newName} is already added to the phone book`);
+      const person = persons.find((person) => person.name === newName);
+      if (person) {
+        if (person.number !== newNumber && window.confirm(`${person.name} is already added to the phonebook, replace the old number with the new one?`)) {
+          changeNumber(person);
+        }
+      }
     }
   };
 
@@ -55,15 +75,7 @@ const App = () => {
   const [newNumber, setNewNumber] = useState('');
 
   useEffect(() => {
-    axios
-      .get('http://localhost:3001/persons')
-      .then((response) => {
-        console.log('JSON data fetched');
-        setPersons(response.data);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+    personsDAO.getAll().then((initialPersons) => setPersons(initialPersons));
   }, []);
 
   return (
@@ -73,7 +85,7 @@ const App = () => {
       <h2> Add a new</h2>
       <PersonForm persons={persons} setPersons={setPersons} newName={newName} setNewName={setNewName} newNumber={newNumber} setNewNumber={setNewNumber} />
       <h2> Numbers</h2>
-      <Persons persons={persons} filter={filter} />
+      <Persons persons={persons} setPersons={setPersons} filter={filter} />
     </div>
   );
 };
